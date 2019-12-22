@@ -3,7 +3,7 @@ from googletrans import Translator
 import discord
 import translAPI
 
-bot-token = "token-here"
+bot_token = "token-here"
 
 
 class MyClient(discord.Client):
