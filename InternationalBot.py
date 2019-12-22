@@ -1,7 +1,7 @@
 from googletrans import Translator
 
 import discord
-import translAPI
+import translationAPI
 
 bot_token = "token-here"
 
@@ -28,7 +28,7 @@ class MyClient(discord.Client):
         else:
             src = str(message.channel).split('-')[-1]
 
-        for dest in translAPI.allowed_languages:
+        for dest in translationAPI.allowed_languages:
             if dest == "":
                 dest = "ru"
 				
