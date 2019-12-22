@@ -12,7 +12,7 @@ class MyClient(discord.Client):
         while text.find("<@!") != -1 and text.find(">") != -1 and text.find("<@!") < text.find(">"):
             author = self.get_user(int(text[text.find("<@!")+3:text.find(">")]))
             text = text[:text.find("<@!")] + str(author).split('#')[0] + text[text.find(">")+1:]
-            return text
+        return text
 
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
