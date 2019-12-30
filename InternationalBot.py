@@ -1,12 +1,13 @@
 from googletrans import Translator
 from yandex.Translater import Translater
 
+import os
 import discord
 import translationAPI
 
 template_channel = "general"
-bot_token = "bot-token"
-yandex_api_token = "api-token"
+bot_token = os.environ["BOT_TOKEN"]
+yandex_api_token = os.environ["YANDEX_API_TOKEN"]
 command_symbol = "!"
 
 
@@ -38,7 +39,7 @@ class MyClient(discord.Client):
             message_text += "*{0}* \n".format(command)
         await channel.send(message_text)
         
-     async def enable_bot(self, channel):
+    async def enable_bot(self, channel):
         self.is_enabled = True
         await channel.send("YAY!!!!")
         
