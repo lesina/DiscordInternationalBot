@@ -1,1 +1,1 @@
-web: python ./InternationalBot.py
+worker: python ./InternationalBot.py
