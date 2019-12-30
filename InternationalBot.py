@@ -38,10 +38,20 @@ class MyClient(discord.Client):
             message_text += "*{0}* \n".format(command)
         await channel.send(message_text)
         
+     async def enable_bot(self, channel):
+        self.is_enabled = True
+        await channel.send("YAY!!!!")
+        
+    async def disable_bot(self, channel):
+        self.is_enabled = False
+        await channel.send("OK =(")
+        
     commands = {
         "help" : help,
         "change_translator" : change_translator,
-        "translator_info" :  translator_info
+        "translator_info" :  translator_info,
+        "disable_bot" : disable_bot,
+        "enable_bot" : enable_bot
     }
 
     async def on_ready(self):
@@ -56,6 +66,9 @@ class MyClient(discord.Client):
         if message.author == self.user or not channel_name.startswith(template_channel):
             return
 
+         if not self.is_enabled:
+            return
+            
         if channel_name == template_channel:
             src = "ru"
         else:
