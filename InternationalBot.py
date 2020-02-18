@@ -13,6 +13,7 @@ user_command_symbol = "/"
 
 class MyClient(discord.Client):
 
+    is_enabled = True
     google_translator = Translator()
     yandex_translator = Translater()
     translators_list = ["google_translator" , "yandex_translator"] # google, yandex
@@ -40,7 +41,7 @@ class MyClient(discord.Client):
                 self.yandex_translator.set_to_lang(dest)
                 self.yandex_translator.set_text(message.content)
                 translated_text = self.yandex_translator.translate()
-                    
+            
             if message.content == translated_text:
                 return False
             else:
@@ -50,7 +51,7 @@ class MyClient(discord.Client):
 ###     ADMIN COMMANDS
 ###=============================================
 
-    def handle_admin_commands(self, message):
+    async def handle_admin_commands(self, message):
         if message.content.startswith(admin_command_symbol) and len(message.content) > 2 and message.content.split()[0][1:] in self.admin_commands and message.author.guild_permissions.administrator:
             await self.admin_commands[message.content.split()[0][1:]](self, message.channel)
     
@@ -89,12 +90,11 @@ class MyClient(discord.Client):
 
     playing_ping_pong = False
 
-    def handle_user_commands(self, message):
+    async def handle_user_commands(self, message):
         if message.content.startswith(user_command_symbol) and len(message.content) > 2 and message.content.split()[0][1:] in self.user_commands:
             await self.user_commands[message.content.split()[0][1:]](self, message)
-        
-        if self.playing_ping_pong:
-            await play_ping_pong(self, message)
+        elif self.playing_ping_pong:
+            await self.play_ping_pong(message)
         
     async def admin_help(self, message):
         message_text = "Available user commands: \n"
@@ -131,18 +131,18 @@ class MyClient(discord.Client):
         print('Logged on as {0}!'.format(self.user))
 
     async def on_message(self, message):
-        handle_admin_commands(message)
-        handle_user_commands(message)
-
         channel_id = message.channel.id
         if message.author == self.user or not channel_id in translationAPI.channel_id_to_language.keys():
             return
 
-         if not self.is_enabled:
+        if not self.is_enabled:
             return
             
+        await self.handle_admin_commands(message)
+        await self.handle_user_commands(message)
+            
         src = translationAPI.channel_id_to_language[channel_id]
-        language_is_known = src_language_is_correct(src, message)
+        language_is_known = self.src_language_is_correct(src, message)
 
         for dest in translationAPI.allowed_languages:
             if src == dest:
@@ -163,10 +163,9 @@ class MyClient(discord.Client):
                 if self.choosen_translater == 0:
                     translated_text = self.google_translator.translate(message.content, src=src, dest=dest).text
                 elif self.choosen_translater == 1:
-                    if language_is_known:
-                        self.yandex_translator.set_from_lang(src)
                     self.yandex_translator.set_to_lang(dest)
                     self.yandex_translator.set_text(message.content)
+                    self.yandex_translator.set_from_lang(src if language_is_known else self.yandex_translator.detect_lang())
                     translated_text = self.yandex_translator.translate()
                 
                 translated_text = self.get_rid_of_mentions(translated_text)
