@@ -1,12 +1,11 @@
 from googletrans import Translator
-from yandex.Translater import Translater
 
 import os
 import discord
 import translationAPI
+import MasterOfCeremony
 
 bot_token = os.environ["BOT_TOKEN"]
-yandex_api_token = os.environ["YANDEX_API_TOKEN"]
 admin_command_symbol = "!"
 user_command_symbol = "/"
 
@@ -15,9 +14,10 @@ class MyClient(discord.Client):
 
     is_enabled = True
     google_translator = Translator()
-    yandex_translator = Translater()
-    translators_list = ["google_translator" , "yandex_translator"] # google, yandex
-    choosen_translater = 1
+    translators_list = ["google_translator"] # google, yandex
+    choosen_translater = 0
+    
+    master_of_ceremony = MasterOfCeremony.MasterOfCeremony()
 
     def get_rid_of_mentions(self, text):
         while "<@!" in text and ">" in text and text.find("<@!") < text.find(">"):
@@ -26,26 +26,6 @@ class MyClient(discord.Client):
             author = self.get_user(int(text[start_index+3:end_index]))
             text = text[:start_index] + str(author).split('#')[0] + text[end_index+1:]
         return text
-
-    def src_language_is_correct(self, src, message):
-        for dest in translationAPI.allowed_languages:
-            if src == dest:
-                continue
-                
-            translated_text = ""
-                
-            if self.choosen_translater == 0:
-                translated_text = self.google_translator.translate(message.content, src=src, dest=dest).text
-            elif self.choosen_translater == 1:
-                self.yandex_translator.set_from_lang(src)
-                self.yandex_translator.set_to_lang(dest)
-                self.yandex_translator.set_text(message.content)
-                translated_text = self.yandex_translator.translate()
-            
-            if message.content == translated_text:
-                return False
-            else:
-                return True
 
 ###=============================================
 ###     ADMIN COMMANDS
@@ -88,46 +68,39 @@ class MyClient(discord.Client):
 ###     USER COMMANDS
 ###=============================================
 
-    playing_ping_pong = False
-
     async def handle_user_commands(self, message):
         if message.content.startswith(user_command_symbol) and len(message.content) > 2 and message.content.split()[0][1:] in self.user_commands:
             await self.user_commands[message.content.split()[0][1:]](self, message)
-        elif self.playing_ping_pong:
-            await self.play_ping_pong(message)
         
-    async def admin_help(self, message):
+    async def user_help(self, message):
         message_text = "Available user commands: \n"
         for command in self.user_commands.keys():
             message_text += "*{0}{1}* \n".format(user_command_symbol, command)
         await message.channel.send(message_text)
         
-    async def play_ping_pong(self, message):
-        if not self.playing_ping_pong or message.content.lower() == "pong":
-            self.playing_ping_pong = True
-            message_text = "Ping"
-        else:
-            self.playing_ping_pong = False
-            message_text = "I win!"
-        
-        await message.channel.send(message_text)
-        
-    async def stop(self, message):
-        self.playing_ping_pong = False
-        await message.channel.send("Ok =(")
-        
     user_commands = {
-        "help" : admin_help,
-        "playpingpong" : play_ping_pong,
-        "stop" : stop
+        "help" : user_help,
     }
     
+###=============================================
+###     OTHER CLASSES HANDLERS
+###=============================================
+    
+    async def handle_classes_callbacks(self, message):
+        for callback in self.classes_callbacks_list:
+            await callback(self, message)
+    
+    async def master_of_ceremony_callback(self, message):
+        await self.master_of_ceremony.execute(message)
+        
+    classes_callbacks_list = [
+        master_of_ceremony_callback,
+    ]
 ###=============================================
 ###     API CALLBACKS
 ###=============================================
 
     async def on_ready(self):
-        self.yandex_translator.set_key(yandex_api_token)
         print('Logged on as {0}!'.format(self.user))
 
     async def on_message(self, message):
@@ -140,12 +113,12 @@ class MyClient(discord.Client):
             
         await self.handle_admin_commands(message)
         await self.handle_user_commands(message)
+        await self.handle_classes_callbacks(message)
             
         src = translationAPI.channel_id_to_language[channel_id]
-        language_is_known = self.src_language_is_correct(src, message)
 
         for dest in translationAPI.allowed_languages:
-            if src == dest:
+            if src == dest or dest == translationAPI.DEFAULT:
                 continue
                 
             channel_to_send = None
@@ -161,12 +134,7 @@ class MyClient(discord.Client):
                 translated_text = ""
                 
                 if self.choosen_translater == 0:
-                    translated_text = self.google_translator.translate(message.content, src=src, dest=dest).text
-                elif self.choosen_translater == 1:
-                    self.yandex_translator.set_to_lang(dest)
-                    self.yandex_translator.set_text(message.content)
-                    self.yandex_translator.set_from_lang(src if language_is_known else self.yandex_translator.detect_lang())
-                    translated_text = self.yandex_translator.translate()
+                        translated_text = self.google_translator.translate(message.content, dest=dest).text
                 
                 translated_text = self.get_rid_of_mentions(translated_text)
                 await channel_to_send.send('**{0}** *{1}*:\n{2}'.format(author, date, translated_text))                
